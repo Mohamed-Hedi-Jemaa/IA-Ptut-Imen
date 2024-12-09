@@ -109,5 +109,6 @@ Principales bibliothèques :
 MIT License
 
 ## Remerciements
-- TensorFlow Team
-- Communauté ESP32
+- Imen
+- Coulin
+- Amélie
