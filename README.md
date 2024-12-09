@@ -3,6 +3,17 @@
 ## Description du Projet
 Ce projet implémente un système de positionnement en intérieur utilisant la technologie RTT (Round Trip Time) avec deux ESP32. Le système utilise des réseaux de neurones profonds pour améliorer la précision des mesures de distance et prédire les positions.
 
+## Structure du Projet
+
+```
+IA-Imen/
+├── rtt_positioning.py        # Script principal du système de positionnement
+├── indoor_positioning.ipynb  # Notebook Jupyter pour l'analyse et la visualisation
+├── esp32_sniffer/           # Code pour l'ESP32
+├── requirements.txt         # Dépendances du projet
+└── README.md               # Documentation du projet
+```
+
 ## Configuration du Système
 
 | Paramètre | Valeur |
@@ -37,34 +48,26 @@ Entrée → GRU(32) → GRU(16) → Dense(2)
 - Visualisation des résultats
 - Calcul des métriques de performance
 
-## Dépendances
-
-```python
-numpy
-tensorflow
-pandas
-scikit-learn
-matplotlib
-seaborn
-```
-
 ## Installation
 
 1. Cloner le dépôt :
 ```bash
 git clone [url-du-dépôt]
-cd rtt-positioning-system
+cd IA-Imen
 ```
 
-2. Installer les dépendances :
+2. Installer les dépendances depuis requirements.txt :
 ```bash
-pip install numpy tensorflow pandas scikit-learn matplotlib seaborn
+pip install -r requirements.txt
 ```
 
 ## Utilisation
 
+### Avec le Notebook Jupyter
+Ouvrir et exécuter `indoor_positioning.ipynb` pour l'analyse interactive et la visualisation.
+
+### Avec le Script Python
 ```python
-# Exemple d'utilisation
 from rtt_positioning import RTTPositioningSystem
 
 # Initialiser le système
@@ -91,25 +94,16 @@ Le système calcule automatiquement :
 - Erreur moyenne
 - Écart-type des erreurs
 
-## Structure du Code
+## Dépendances
+Voir le fichier `requirements.txt` pour la liste complète des dépendances.
 
-```
-rtt_positioning.py
-├── class RTTPositioningSystem
-│   ├── __init__()
-│   ├── _build_rcdn()
-│   ├── _build_rpn()
-│   ├── _build_combined_model()
-│   ├── custom_loss()
-│   └── train_and_evaluate()
-├── plot_training_history()
-├── visualize_positioning_results()
-├── calculate_metrics()
-└── generate_synthetic_data()
-```
-
-## Auteurs
-- [Votre nom]
+Principales bibliothèques :
+- TensorFlow
+- NumPy
+- Pandas
+- Scikit-learn
+- Matplotlib
+- Seaborn
 
 ## Licence
 MIT License
