@@ -1,119 +1,119 @@
-# IA-Ptut-Imen
+# Système de Positionnement RTT avec ESP32
 
-# RTT Positioning System Using ESP32
+## Description du Projet
+Ce projet implémente un système de positionnement en intérieur utilisant la technologie RTT (Round Trip Time) avec deux ESP32. Le système utilise des réseaux de neurones profonds pour améliorer la précision des mesures de distance et prédire les positions.
 
-## Overview
-This project implements an indoor positioning system based on RTT (Round Trip Time) distance measurements and position prediction using two ESP32 devices. The system leverages deep learning models to correct measured distances and predict (x,y) coordinates of reference points within a defined room.
+## Configuration du Système
 
-## Room Configuration
-- Room Dimensions: 6.47m × 4.85m
-- ESP32 Placements:
-  - ESP32_1: (-2, 1.5)
-  - ESP32_2: (2.5, -1.5)
-- Grid Resolution: 0.5m × 0.5m
+| Paramètre | Valeur |
+|-----------|---------|
+| Largeur de la pièce | 6.47 mètres |
+| Hauteur de la pièce | 4.85 mètres |
+| Résolution de la grille | 0.5m × 0.5m |
+| Position ESP32_1 | (-2, 1.5) |
+| Position ESP32_2 | (2.5, -1.5) |
 
-## System Architecture
+## Architecture des Modèles
 
-### Deep Learning Models
+### 1. RCDN (RTT Compensation Distance Network)
+```
+Entrée → Conv1D(32) → ReLU → Conv1D(32) → ReLU → MaxPooling1D → Dense(64) → Sortie(2)
+```
+- **Entrée** : Échantillons RTT (10 pas de scan, 2 ESP32)
+- **Sortie** : Distances compensées pour 2 ESP32
 
-#### 1. RCDN (RTT Compensation Distance Network)
-- 1D convolutional network designed to reduce RTT distance noise
-- Input: Raw RTT samples
-- Output: Corrected distances
+### 2. RPN (Region Proposal Network)
+```
+Entrée → GRU(32) → GRU(16) → Dense(2)
+```
+- **Entrée** : Distances compensées
+- **Sortie** : Coordonnées (x, y)
 
-#### 2. RPN (Region Proposal Network)
-- GRU-based network for (x,y) coordinate prediction
-- Input: Corrected distances
-- Output: Predicted coordinates
+## Fonctionnalités Principales
 
-#### 3. Combined Model
-- End-to-end integration of RCDN and RPN
-- Optimized for both distance and position errors
+- Génération de données synthétiques
+- Compensation des distances RTT
+- Prédiction des positions en temps réel
+- Visualisation des résultats
+- Calcul des métriques de performance
+
+## Dépendances
+
+```python
+numpy
+tensorflow
+pandas
+scikit-learn
+matplotlib
+seaborn
+```
 
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
-- ESP32 development environment
-- Required Python packages:
-
+1. Cloner le dépôt :
 ```bash
-pip install tensorflow pandas numpy matplotlib seaborn scikit-learn
-```
-
-### Hardware Requirements
-- 2x ESP32 development boards
-- USB cables for programming
-- Power supply for ESP32s
-
-## Project Structure
-
-```
-positioning_system/
-├── data/
-│   ├── synthetic/         # Synthetic training data
-│   └── real/             # Real measurement data
-├── models/
-│   ├── rcdn.py           # RTT Compensation Distance Network
-│   ├── rpn.py            # Region Proposal Network
-│   └── combined.py       # Combined model implementation
-├── utils/
-│   ├── data_generator.py # Synthetic data generation
-│   └── visualization.py  # Plotting and visualization tools
-└── main.py              # Main execution script
-```
-
-## Data Generation
-The system generates synthetic data with the following characteristics:
-- Random reference points within the room grid
-- True distances to ESP32s
-- Gaussian-distributed noisy RTT samples
-
-Example data format:
-```
-Reference_Point_X | Reference_Point_Y | True_Distance | RTT_Samples
-1.0              | 2.5              | [3.1, 2.7]    | [[3.0, 2.8], [3.1, 2.6], ...]
-3.0              | 1.0              | [2.2, 4.1]    | [[2.3, 4.0], [2.1, 4.2], ...]
-```
-
-## Usage
-
-1. Clone the repository:
-```bash
-git clone [repository-url]
+git clone [url-du-dépôt]
 cd rtt-positioning-system
 ```
 
-2. Install dependencies:
+2. Installer les dépendances :
 ```bash
-pip install -r requirements.txt
+pip install numpy tensorflow pandas scikit-learn matplotlib seaborn
 ```
 
-3. Run the main script:
-```bash
-python main.py
+## Utilisation
+
+```python
+# Exemple d'utilisation
+from rtt_positioning import RTTPositioningSystem
+
+# Initialiser le système
+system = RTTPositioningSystem(scanning_steps=10)
+
+# Générer des données synthétiques
+data = generate_synthetic_data(n_points=200, n_samples=10)
+
+# Entraîner le modèle
+system.train_and_evaluate(X_train, y_train, X_val, y_val, epochs=100)
 ```
 
-## Results and Visualization
-The system provides:
-- Training history plots
-- True vs predicted position visualization
-- Error distribution analysis
-- RMSE and mean error metrics
+## Visualisations
 
-## Future Improvements
-- [ ] Real-world data collection and validation
-- [ ] Hyperparameter optimization
-- [ ] Real-time embedded deployment
-- [ ] Multi-ESP32 support for improved accuracy
+Le système génère plusieurs visualisations :
+- Historique d'entraînement (perte et précision)
+- Positions réelles vs prédites
+- Distribution des erreurs
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Métriques de Performance
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+Le système calcule automatiquement :
+- RMSE (Root Mean Square Error)
+- Erreur moyenne
+- Écart-type des erreurs
 
-## Acknowledgments
-- ESP32 development community
-- TensorFlow team
-- Contributors and testers
+## Structure du Code
+
+```
+rtt_positioning.py
+├── class RTTPositioningSystem
+│   ├── __init__()
+│   ├── _build_rcdn()
+│   ├── _build_rpn()
+│   ├── _build_combined_model()
+│   ├── custom_loss()
+│   └── train_and_evaluate()
+├── plot_training_history()
+├── visualize_positioning_results()
+├── calculate_metrics()
+└── generate_synthetic_data()
+```
+
+## Auteurs
+- [Votre nom]
+
+## Licence
+MIT License
+
+## Remerciements
+- TensorFlow Team
+- Communauté ESP32
