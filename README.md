@@ -1,111 +1,170 @@
 # Système de Positionnement RTT avec ESP32
 
-## Description du Projet
-Ce projet implémente un système de positionnement en intérieur utilisant la technologie RTT (Round Trip Time) avec deux ESP32. Le système utilise des réseaux de neurones profonds pour améliorer la précision des mesures de distance et prédire les positions.
+# Indoor Positioning System (IPS) Using RSSI and Neural Networks
 
-## Structure du Projet
+## Project Overview
+This project implements an indoor positioning system that can determine a person or device's location inside a room using WiFi signal strengths (RSSI) from two ESP32 devices. Think of it like "indoor GPS" that uses WiFi signals instead of satellites.
 
+## How It Works
+
+### 1. Basic Concept
+- Two ESP32 devices are placed at fixed positions in the room
+- These ESP32s act like "indoor satellites"
+- When someone moves around the room, we measure:
+  * How strong the WiFi signal is from ESP32_1 (RSSI_1)
+  * How strong the WiFi signal is from ESP32_2 (RSSI_2)
+- Using these two signal strengths, we can predict where the person is
+-------------------------------------
+Example at one grid point (1, 1):
+Code
+CopyInsert
+Scan 1: ESP32_1: -65dBm, ESP32_2: -70dBm
+Scan 2: ESP32_1: -64dBm, ESP32_2: -71dBm
+Scan 3: ESP32_1: -66dBm, ESP32_2: -69dBm
+...
+Scan 10: ESP32_1: -65dBm, ESP32_2: -70dBm
+Why 10 measurements?
+RSSI values fluctuate due to:
+Environmental interference
+People moving
+Signal reflections
+Taking multiple readings helps get a more stable average
+We use the average value for better accuracy
+In data_collector.py:
+python
+CopyInsert
+# Pseudocode of what happens
+for x_position in grid_points_x:
+    for y_position in grid_points_y:
+        # Move to this position physically
+        print(f"Please move to position ({x_position}, {y_position})")
+        
+        # Collect 10 readings
+        readings = []
+        for i in range(10):
+            rssi_esp1 = scan_wifi_from_esp32_1()  # Get RSSI from first ESP32
+            rssi_esp2 = scan_wifi_from_esp32_2()  # Get RSSI from second ESP32
+            readings.append({
+                'x': x_position,
+                'y': y_position,
+                'esp1_rssi': rssi_esp1,
+                'esp2_rssi': rssi_esp2
+            })
+            time.sleep(1)  # Wait a bit between readings
+So while you only have 2 ESP32s, you're taking multiple measurements from each one at every position to account for signal variations and get more reliable data. This is similar to how your phone might show different WiFi signal strengths even when you're not moving.
+
+### 2. Data Collection
+- We create a grid in the room (every 0.5 meters)
+- At each grid point:
+  * Take 10 RSSI measurements from each ESP32
+  * Store the position (x,y) and RSSI values
+- This creates our training dataset
+- Data is saved in two formats:
+  * Raw data: Every individual measurement
+  * Processed data: Averaged measurements per position
+
+  Let me explain the data collection process:
+
+Physical Setup:
+You have 2 ESP32s fixed at known positions:
+ESP32_1 at (-2, 1.5) meters
+ESP32_2 at (2.5, -1.5) meters
+Collection Process:
+You (or someone) physically moves to each grid point with a device (like a phone or another ESP32)
+At each point (let's say at position (1, 1) meters):
+Your device scans for WiFi signals 10 times
+Each scan gets:
+One RSSI reading from ESP32_1
+One RSSI reading from ESP32_2
+So after 10 scans at this position, you have:
+10 RSSI values from ESP32_1
+10 RSSI values from ESP32_2
+
+### 3. Neural Network
+- We use a simple neural network that:
+  * Takes input: RSSI values from both ESP32s
+  * Gives output: Predicted (x,y) position
+- The network learns patterns between:
+  * Signal strengths (input)
+  * Actual positions (output)
+
+## Project Structure
 ```
-IA-Imen/
-├── rtt_positioning.py        # Script principal du système de positionnement
-├── indoor_positioning.ipynb  # Notebook Jupyter pour l'analyse et la visualisation
-├── esp32_sniffer/           # Code pour l'ESP32
-├── requirements.txt         # Dépendances du projet
-└── README.md               # Documentation du projet
+├── src/
+│   ├── indoor_positioning_rssi.py  # Main RSSI positioning code
+│   ├── indoor_positioning_rtt.py   # RTT positioning implementation
+│   ├── models.py                   # Neural network model definitions
+│   ├── rtt_collector.py           # RTT data collection
+│   └── data_collector.py          # RSSI data collection
+├── data/                         # Collected and processed data
+│   ├── rssi_raw_data.csv        # Raw RSSI measurements
+│   └── rssi_processed_data.csv  # Processed RSSI data
+└── requirements.txt             # Python dependencies
 ```
 
-## Configuration du Système
+## Key Components
 
-| Paramètre | Valeur |
-|-----------|---------|
-| Largeur de la pièce | 6.47 mètres |
-| Hauteur de la pièce | 4.85 mètres |
-| Résolution de la grille | 0.5m × 0.5m |
-| Position ESP32_1 | (-2, 1.5) |
-| Position ESP32_2 | (2.5, -1.5) |
+### 1. Data Generation (`indoor_positioning_rssi.py`)
+- Creates synthetic RSSI data
+- Simulates real-world measurements
+- Helps test the system before real deployment
+- Parameters:
+  * Room size: 6.47m × 4.85m
+  * Grid spacing: 0.5m
+  * Samples per position: 10
 
-## Architecture des Modèles
+### 2. Neural Network Model (`models.py`)
+- Simple architecture:
+  * Input layer: 2 neurons (RSSI_1, RSSI_2)
+  * Hidden layers with ReLU activation
+  * Output layer: 2 neurons (x, y position)
+- Trained using Mean Squared Error loss
+- Optimized with Adam optimizer
 
-### 1. RCDN (RTT Compensation Distance Network)
-```
-Entrée → Conv1D(32) → ReLU → Conv1D(32) → ReLU → MaxPooling1D → Dense(64) → Sortie(2)
-```
-- **Entrée** : Échantillons RTT (10 pas de scan, 2 ESP32)
-- **Sortie** : Distances compensées pour 2 ESP32
+### 3. Data Processing
+- Raw data includes:
+  * device_id
+  * x_position
+  * y_position
+  * rssi_value
+- Processed data includes:
+  * x_position
+  * y_position
+  * averaged_rssi_esp32_1
+  * averaged_rssi_esp32_2
 
-### 2. RPN (Region Proposal Network)
-```
-Entrée → GRU(32) → GRU(16) → Dense(2)
-```
-- **Entrée** : Distances compensées
-- **Sortie** : Coordonnées (x, y)
+## Setup Instructions
 
-## Fonctionnalités Principales
+1. **Environment Setup**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- Génération de données synthétiques
-- Compensation des distances RTT
-- Prédiction des positions en temps réel
-- Visualisation des résultats
-- Calcul des métriques de performance
+2. **Running in Google Colab**
+   - Data is saved to Google Drive
+   - Mount drive: `drive.mount('/content/drive')`
+   - Access data in: `/content/drive/MyDrive/indoor_positioning_data/`
 
-## Installation
+3. **Training the Model**
+   - Run `indoor_positioning_rssi.py`
+   - Model will train on generated/collected data
+   - Results show positioning accuracy
 
-1. Cloner le dépôt :
-```bash
-git clone [url-du-dépôt]
-cd IA-Imen
-```
+## Expected Results
+- Position prediction accuracy typically within 1-2 meters
+- Better accuracy in areas with stronger signal coverage
+- Performance depends on:
+  * Number of ESP32 devices
+  * Room layout
+  * Environmental factors
 
-2. Installer les dépendances depuis requirements.txt :
-```bash
-pip install -r requirements.txt
-```
+## Future Improvements
+1. Add more ESP32 devices for better accuracy
+2. Implement real-time positioning
+3. Add signal filtering for noise reduction
+4. Integrate with mobile app for visualization
 
-## Utilisation
-
-### Avec le Notebook Jupyter
-Ouvrir et exécuter `indoor_positioning.ipynb` pour l'analyse interactive et la visualisation.
-
-### Avec le Script Python
-```python
-from rtt_positioning import RTTPositioningSystem
-
-# Initialiser le système
-system = RTTPositioningSystem(scanning_steps=10)
-
-# Générer des données synthétiques
-data = generate_synthetic_data(n_points=200, n_samples=10)
-
-# Entraîner le modèle
-system.train_and_evaluate(X_train, y_train, X_val, y_val, epochs=100)
-```
-
-## Visualisations
-
-Le système génère plusieurs visualisations :
-- Historique d'entraînement (perte et précision)
-- Positions réelles vs prédites
-- Distribution des erreurs
-
-## Métriques de Performance
-
-Le système calcule automatiquement :
-- RMSE (Root Mean Square Error)
-- Erreur moyenne
-- Écart-type des erreurs
-
-## Dépendances
-Voir le fichier `requirements.txt` pour la liste complète des dépendances.
-
-Principales bibliothèques :
-- TensorFlow
-- NumPy
-- Pandas
-- Scikit-learn
-- Matplotlib
-- Seaborn
-
-## Licence
+## License
 MIT License
 
 ## Remerciements
